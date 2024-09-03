@@ -1,0 +1,84 @@
+--this macro converts the table from the IMS report into an excel table (delete rows, columns, format into table)
+
+Sub ModifySheetAndConvertToTable()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim lastColumn As Long
+    Dim tblRange As Range
+    Dim tbl As ListObject
+    Dim i As Long
+    Dim shp As Shape
+    
+    ' Set the worksheet you are working on
+    Set ws = ThisWorkbook.Sheets("Sheet 1)") ' Change to your sheet name
+    
+    ' Delete Row 1
+    ws.Rows(1).Delete
+    
+    ' Delete Columns F and D
+    ws.Columns("F").Delete
+    ws.Columns("D").Delete
+    
+    ' Remove all objects from the worksheet
+    On Error Resume Next ' Ignore errors if no shapes are present
+    For Each shp In ws.Shapes
+        shp.Delete
+    Next shp
+    On Error GoTo 0 ' Turn back on default error handling
+    
+    ' Add a new column before Column A and name it "Export"
+    ws.Columns("A:A").Insert Shift:=xlToRight
+    ws.Cells(1, 1).Value = "Export"
+    
+    ' Find the last row and column with data (after deleting row 1 and columns)
+    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row
+    lastColumn = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+    
+    ' Loop through rows from bottom to top and delete rows containing "Project #"
+    For i = lastRow To 1 Step -1
+        If ws.Cells(i, 2).Value = "Project #" Then
+            ws.Rows(i).Delete
+        End If
+    Next i
+    
+    ' Redefine the range for the table (starting from the new row 1)
+    Set tblRange = ws.Range(ws.Cells(1, 1), ws.Cells(lastRow, lastColumn))
+    
+    ' Clear any existing table formats
+    On Error Resume Next
+    For Each tbl In ws.ListObjects
+        tbl.Delete
+    Next tbl
+    On Error GoTo 0
+    
+    ' Clear any formatting in the range (optional)
+    tblRange.ClearFormats
+    
+    ' Add a table to the defined range (without headers)
+    Set tbl = ws.ListObjects.Add(xlSrcRange, tblRange, xlNo, xlNone, tblRange)
+    tbl.Name = "Projects" ' Optional: Name the table
+    
+    ' Rename headers in the table (adjusting column index based on the final table structure)
+    ws.Cells(1, 1).Value = "Export" ' "Export" is already set in the new column
+    ws.Cells(1, 2).Value = "Project #"
+    ws.Cells(1, 3).Value = "Agency"
+    ws.Cells(1, 4).Value = "Region"
+    ws.Cells(1, 5).Value = "Title"
+    ws.Cells(1, 6).Value = "Status"
+    ws.Cells(1, 7).Value = "Deadline"
+    
+    ' Format Column G as Short Date (assuming Column G is now the 7th column)
+    ws.Columns("G").NumberFormat = "mm/dd/yyyy"
+    
+    ' Apply font settings to the table
+    With tbl.Range
+        .Font.Name = "Aptos"
+        .Font.Size = 10
+    End With
+    
+    ' Resize the row height (for example, set to 20 points)
+    ws.Rows.RowHeight = 20
+    
+    MsgBox "Success!", vbInformation
+End Sub
+
